@@ -47,6 +47,12 @@ blueprint:
           default: "{{ now().timetuple().tm_yday }}"
           selector:
             template:
+        sort_by_soc:
+          name: Keep SOC`s within 10%
+          description: order the batteries by State of Charge so that they stay within 10% of each other. This overrides the Priority offset template.
+          default: true
+          selector:
+            boolean: {}
 
     power_section:
       name: Power
@@ -172,6 +178,10 @@ variables:
   device_ids: !input battery_device
   min_battery_level: !input battery_soc_min
   max_battery_level: !input battery_soc_max
+
+  # Battery rotation
+  priority_offset_template: !input priority_offset_template
+  sort_by_soc: !input sort_by_soc
   
   # Power 
   min_battery_power: !input battery_optimal_min
@@ -211,9 +221,12 @@ action:
       battery_count: |
         {{ device_ids | count }}
 
-      priority_offset_template: !input priority_offset_template
-      priority_offset: |
-        {{ priority_offset_template % battery_count }}
+      priority_offset: >
+        {% if sort_by_soc  %}
+            {{ 0 }}
+        {% else%}
+            {{ priority_offset_template % battery_count }}
+        {% endif %}
 
   - variables:
       # Get Entity IDs from device IDs
