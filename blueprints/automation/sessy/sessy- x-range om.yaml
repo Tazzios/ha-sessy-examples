@@ -387,20 +387,14 @@ action:
             {% if soc_entity %}
               {% set soc_value = states(soc_entity[0]) | int %}
               {% if setpoint < 0 %}
-                {# Laden: afronden SOC naar boven op tientallen #}
-                {% set soc_rounded = ((soc_value + 9) // 10) * 10 %}
+                {# charge roundup #}
+                {% set soc_rounded = ((soc_value + sort_by_soc) // sort_by_soc) * sort_by_soc %}
               {% else %}
-                {# Ontladen: afronden SOC naar beneden op tientallen #}
-                {% set soc_rounded = (soc_value // 10) * 10 %}
-              {% endif %}  
-            {% if setpoint < 0 %}
-              {# charge roundup #}
-              {% set soc_rounded = ((soc_value + sort_by_soc) // sort_by_soc) * sort_by_soc %}
-            {% else %}
-              {# Discharge round down #}
-              {% set soc_rounded = ((soc_value -1) // sort_by_soc) * sort_by_soc %}
-              {% set soc_map.list = soc_map.list + [[soc_rounded, dev]] %}
-            {% endif %}
+                {# Discharge round down #}
+                {% set soc_rounded = ((soc_value -1) // sort_by_soc) * sort_by_soc %}
+              {% endif %}
+                {% set soc_map.list = soc_map.list + [[soc_rounded, dev]] %}
+              {% endif %}
           {% endfor %}
           
           {% if setpoint < 0 %} 
@@ -423,7 +417,10 @@ action:
       priority_offset: >
         {% if sort_by_soc < 5 %}
             {{ priority_offset_template % battery_count }}
+        {% else%}    
+            {{ 0 }}
         {% endif %}
+
 
   - choose:
       - conditions:
