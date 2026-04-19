@@ -3,21 +3,21 @@ max_exceeded: silent
 
 blueprint:
   name: Sessy X range on the Meter
-  description: > 
+  description: >
     Control a Sessy Battery according to a grid sensor
-  
+
     Version: 1.8
-    
+
     Breaking: smoothing is renamed to smoothing_max_watts
-    
+
     New: minimum different in setpoint change
-    
+
     New: Smoothing factor above delta x
-    
+
     New: Smoothing factor when passing zero
-    
+
     New: sort by soc
-      
+
   author: PimDoos & Tazzios
   domain: automation
   input:
@@ -55,18 +55,21 @@ blueprint:
       description: Rotate multiple batteries
       icon: mdi:rotate-3d-variant
       input:
+        sort_by_soc:
+          name: Keep SOC`s within 10%
+          description: order the batteries by State of Charge. Below 5 means off then the Priority offset template will be applied. 
+          default: 10
+          selector:
+            number:
+              min: 1
+              max: 50
         priority_offset_template:
           name: Priority offset template
           description: Template defining a value to rotate battery priority by. Values higher than the number of batteries will loop back to 0.
           default: "{{ now().timetuple().tm_yday }}"
           selector:
             template:
-        sort_by_soc:
-          name: Keep SOC`s within 10%
-          description: order the batteries by State of Charge so that they stay within 10% of each other. This overrides the Priority offset template.
-          default: true
-          selector:
-            boolean: {}
+
 
     power_section:
       name: Power
@@ -377,7 +380,7 @@ action:
             {% set device_ids = device_ids %}
         {% endif %}
 
-        {% if sort_by_soc  %}
+        {% if sort_by_soc >= 5  %}
           {% set soc_map = namespace(list=[]) %}
           {% for dev in device_ids %}
             {% set soc_entity = device_entities(dev) | select("search", "_state_of_charge$") | list %}
@@ -389,7 +392,13 @@ action:
               {% else %}
                 {# Ontladen: afronden SOC naar beneden op tientallen #}
                 {% set soc_rounded = (soc_value // 10) * 10 %}
-              {% endif %}   
+              {% endif %}  
+            {% if setpoint < 0 %}
+              {# charge roundup #}
+              {% set soc_rounded = ((soc_value + sort_by_soc) // sort_by_soc) * sort_by_soc %}
+            {% else %}
+              {# Discharge round down #}
+              {% set soc_rounded = ((soc_value -1) // sort_by_soc) * sort_by_soc %}
               {% set soc_map.list = soc_map.list + [[soc_rounded, dev]] %}
             {% endif %}
           {% endfor %}
@@ -412,9 +421,7 @@ action:
         {{ ids | count }}
 
       priority_offset: >
-        {% if sort_by_soc  %}
-            {{ 0 }}
-        {% else%}
+        {% if sort_by_soc < 5 %}
             {{ priority_offset_template % battery_count }}
         {% endif %}
 
