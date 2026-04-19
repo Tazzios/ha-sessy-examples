@@ -56,8 +56,8 @@ blueprint:
       icon: mdi:rotate-3d-variant
       input:
         sort_by_soc:
-          name: Keep SOC`s within 10%
-          description: order the batteries by State of Charge. Below 5 means off then the Priority offset template will be applied. 
+          name: Order by State of Charge 
+          description: order the batteries by State of Charge. Below 5 means off, then the Priority offset template will be applied. 
           default: 10
           selector:
             number:
